@@ -18,7 +18,7 @@ def install():
 
     if not path.exists(VENV_PATH):
         makedirs(path.dirname(VENV_PATH))
-        check_call(['python3 venv', VENV_PATH])
+        check_call(['python3 -m venv', VENV_PATH])
 
     version = hookenv.config('version')
     packages.pip_install('errbot=={}'.format(version), venv=VENV_PATH)
