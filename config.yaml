@@ -1,0 +1,4 @@
+options:
+  version:
+    type: string
+    description: errbot version to install
