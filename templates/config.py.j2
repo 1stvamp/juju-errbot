@@ -30,14 +30,14 @@ BACKEND = '{{ backend }}'
 
 # The location where all of Err's data should be stored. Make sure to set
 # this to a directory that is writable by the user running the bot.
-BOT_DATA_DIR = '/srv/errbot/var/data'
+BOT_DATA_DIR = '{{ data_path }}'
 
 # Set this to a directory on your system where you want to load extra
 # plugins from, which is useful mostly if you want to develop a plugin
 # locally before publishing it. Note that you can specify only a single
 # directory, however you are free to create subdirectories with multiple
 # plugins inside this directory.
-BOT_EXTRA_PLUGIN_DIR = '/srv/errbot/plugins'
+BOT_EXTRA_PLUGIN_DIR = '{{ plugin_path }}'
 
 # If you use an external backend as a plugin,
 # this is where you tell err where to find it.
@@ -55,7 +55,7 @@ AUTOINSTALL_DEPS = {{ auto_install_plugin_deps }}
 
 # The location of the log file. If you set this to None, then logging will
 # happen to console only.
-BOT_LOG_FILE = '/srv/errbot/var/log/err.log'
+BOT_LOG_FILE = '{{ log_path }}/err.log'
 
 # The verbosity level of logging that is done to the above logfile, and to
 # the console. This takes the standard Python logging levels, DEBUG, INFO,
@@ -68,7 +68,7 @@ BOT_LOG_LEVEL = logging.INFO
 
 # Enable logging to sentry (find out more about sentry at www.getsentry.com).
 # This is optional and disabled by default.
-BOT_LOG_SENTRY = {{ sentry_dsn|bool }}
+BOT_LOG_SENTRY = {% if sentry_dsn -%} True {%- else -%} False {%- endif %}
 SENTRY_DSN = '{{ sentry_dsn }}'
 SENTRY_LOGLEVEL = BOT_LOG_LEVEL
 
@@ -111,13 +111,13 @@ BOT_IDENTITY = {
 # Set the admins of your bot. Only these users will have access
 # to the admin-only commands.
 #
-BOT_ADMINS = {{ admins|split(',') }}
+BOT_ADMINS = {{ admins.split(',') }}
 
 # Chatrooms your bot should join on startup. For the IRC backend you
 # should include the # sign here. For XMPP rooms that are password
 # protected, you can specify another tuple here instead of a string,
 # using the format (RoomName, Password).
-CHATROOM_PRESENCE = {{ chatrooms|split(',') }}
+CHATROOM_PRESENCE = {{ chatrooms.split(',') }}
 
 # The FullName, or nickname, your bot should use. What you set here will
 # be the nickname that Err shows in chatrooms. Note that some XMPP
@@ -148,7 +148,7 @@ BOT_PREFIX_OPTIONAL_ON_CHAT = {{ prefix_optional_on_chat }}
 # names, rather than the BOT_PREFIX above. This option allows you to
 # specify alternative prefixes the bot will respond to in addition to
 # the prefix above.
-BOT_ALT_PREFIXES = ['{{ nickname }}', '{{ fullname }}'] + {{ alt_prefixes|split(',') }}
+BOT_ALT_PREFIXES = ['{{ nickname }}', '{{ fullname }}'] + {{ alt_prefixes.split(',') }}
 
 # If you use alternative prefixes, you might want to allow users to insert
 # separators like , and ; between the prefix and the command itself. This
@@ -205,7 +205,7 @@ HIDE_RESTRICTED_ACCESS = {{ hide_restricted_access }}
 # A list of commands which should be responded to in private, even if
 # the command was given in a MUC. For example:
 # DIVERT_TO_PRIVATE = ('help', 'about', 'status')
-DIVERT_TO_PRIVATE = {{ divert_to_private|split(',') }} 
+DIVERT_TO_PRIVATE = {{ divert_to_private.split(',') }} 
 
 # Chat relay
 # Can be used to relay one to one message from specific users to the bot

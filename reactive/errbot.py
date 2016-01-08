@@ -10,15 +10,23 @@ from charmhelpers.core.host import adduser, add_group, lsb_release
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.python import packages
 
-from charms.reactive import hook
+from charms.reactive import hook, when
 
 
 BASE_PATH = '/srv/errbot'
+VAR_PATH = path.join(BASE_PATH, 'var')
+LOG_PATH = path.join(VAR_PATH, 'log')
+DATA_PATH = path.join(VAR_PATH, 'data')
+PLUGIN_PATH = path.join(VAR_PATH, 'plugins')
+ETC_PATH = path.join(BASE_PATH, 'etc')
 VENV_PATH = path.join(BASE_PATH, 'venv')
 PATHS = (
-    (path.join(BASE_PATH, 'var/log'), 'errbot', 'errbot'),
-    (path.join(BASE_PATH, 'var/data'), 'errbot', 'errbot'),
-    (path.join(BASE_PATH, 'etc'), 'errbot', 'errbot'),
+    (VAR_PATH, 'ubunet', 'ubunet'),
+    (LOG_PATH, 'errbot', 'errbot'),
+    (DATA_PATH, 'errbot', 'errbot'),
+    (PLUGIN_PATH, 'errbot', 'errbot'),
+    (ETC_PATH, 'ubunet', 'ubunet'),
+    (VENV_PATH, 'ubunet', 'ubunet'),
 )
 
 
@@ -47,8 +55,8 @@ def apply_dir_perms(f):
     return wrapper
 
 
-@hook('config-changed')
 @apply_dir_perms
+@hook('config-changed')
 def install():
     hookenv.status_set('maintenance', 'Installing packages')
     codename = lsb_release()['DISTRIB_CODENAME']
@@ -71,24 +79,28 @@ def install():
     if not path.exists(path.join(VENV_PATH, 'bin')):
         check_call(['/usr/bin/python3', '-m', 'venv', VENV_PATH])
 
-    hookenv.status_set('maintenance',
-                       'Installing configured version of errbot')
     version = hookenv.config('version')
     if not version:
         hookenv.log('version not set, skipping install of errbot',
                     level='WARNING')
         return
 
+    hookenv.status_set('maintenance',
+                       'Installing configured version of errbot')
     packages.pip_install('errbot=={}'.format(version), venv=VENV_PATH)
 
 
-@hook('config-changed')
 @apply_dir_perms
+@hook('config-changed')
 def config():
     hookenv.status_set('maintenance',
                        'Generating errbot configuration file')
-    render(source='templates/config.py.j2',
-           target='/var/errbot/etc/config.py',
+    context = hookenv.config()
+    context['data_path'] = DATA_PATH
+    context['plugin_path'] = PLUGIN_PATH
+    context['log_path'] = LOG_PATH
+    render(source='config.py.j2',
+           target=path.join(ETC_PATH, 'config.py'),
            owner='errbot',
            perms=0o755,
-           context=hookenv.config())
+           context=context)
