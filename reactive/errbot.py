@@ -121,7 +121,7 @@ def config():
     }
 
     with ensure_user_and_perms(PATHS):
-        render(source='config.py.j2',
+        render(source='errbot_config.py.j2',
                target=CONFIG_PATH,
                owner='errbot',
                perms=0o744,
