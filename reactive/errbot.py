@@ -1,6 +1,6 @@
 from contextlib import contextmanager
-from os import makedirs, path, walk
-from shutil import chown
+from grp import getgrnam
+from os import makedirs, path
 from subprocess import check_call
 
 from charmhelpers import fetch
@@ -8,8 +8,10 @@ from charmhelpers.core import hookenv
 from charmhelpers.core.host import (
     adduser,
     add_group,
+    chownr,
     lsb_release,
-    service_reload,
+    restart_on_change,
+    user_exists,
 )
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.python import packages
@@ -25,6 +27,7 @@ PLUGIN_PATH = path.join(VAR_PATH, 'plugins')
 ETC_PATH = path.join(BASE_PATH, 'etc')
 VENV_PATH = path.join(BASE_PATH, 'venv')
 CONFIG_PATH = path.join(ETC_PATH, 'config.py')
+UPSTART_PATH = '/etc/init/errbot.conf'
 PATHS = (
     (VAR_PATH, 'ubunet', 'ubunet'),
     (LOG_PATH, 'errbot', 'errbot'),
@@ -41,16 +44,17 @@ def ensure_user_and_perms(paths):
         for p in paths:
             makedirs(p[0], exist_ok=True)
 
-            # Create user and group, no-op if either already exists
-            add_group(p[2], system_group=True)
-            adduser(p[1], shell='/bin/false', system_user=True,
-                    primary_group=p[2])
+            try:
+                getgrnam(p[2])
+            except KeyError:
+                add_group(p[2], system_group=True)
 
-            # Ensure the base path is owned appropriately
-            chown(path=p[0], user=p[1], group=p[2])
-            for root, dirnames, filenames in walk(path.join(p[0])):
-                for f in dirnames + filenames:
-                    chown(path=path.join(root, f), user=p[1], group=p[2])
+            if not user_exists(p[1]):
+                adduser(p[1], shell='/bin/false', system_user=True,
+                        primary_group=p[2])
+
+            # Ensure path is owned appropriately
+            chownr(path=p[0], owner=p[1], group=p[2], chowntopdir=True)
 
     perms()
     yield
@@ -95,9 +99,14 @@ def install():
 
 
 @when('errbot.installed')
+@restart_on_change({
+    CONFIG_PATH: ['errbot'],
+    UPSTART_PATH: ['errbot'],
+}, stopstart=False)
 def config():
     hookenv.status_set('maintenance',
                        'Generating errbot configuration file')
+
     config_ctx = hookenv.config()
     config_ctx['data_path'] = DATA_PATH
     config_ctx['plugin_path'] = PLUGIN_PATH
@@ -118,10 +127,9 @@ def config():
                perms=0o744,
                context=config_ctx)
         render(source='errbot_upstart.j2',
-               target='/etc/init/errbot.conf',
+               target=UPSTART_PATH,
                owner='root',
                perms=0o744,
                context=upstart_ctx)
 
-    service_reload('errbot', restart_on_failure=True)
     set_state('errbot.available')
