@@ -1,6 +1,5 @@
-from functools import wraps
-from glob import glob
-from os import makedirs, path
+from contextlib import contextmanager
+from os import makedirs, path, walk
 from shutil import chown
 from subprocess import check_call
 
@@ -10,7 +9,7 @@ from charmhelpers.core.host import adduser, add_group, lsb_release
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.python import packages
 
-from charms.reactive import hook, when
+from charms.reactive import hook
 
 
 BASE_PATH = '/srv/errbot'
@@ -30,9 +29,10 @@ PATHS = (
 )
 
 
-def apply_dir_perms(f):
+@contextmanager
+def ensure_user_and_perms(paths):
     def perms():
-        for p in PATHS:
+        for p in paths:
             makedirs(p[0], exist_ok=True)
 
             # Create user and group, no-op if either already exists
@@ -42,20 +42,15 @@ def apply_dir_perms(f):
 
             # Ensure the base path is owned appropriately
             chown(path=p[0], user=p[1], group=p[2])
-            for f in glob(path.join(p[0], '**/*')):
-                chown(path=path.join(p[0], f), user=p[1], group=p[2])
+            for root, dirnames, filenames in walk(path.join(p[0])):
+                for f in dirnames + filenames:
+                    chown(path=path.join(root, f), user=p[1], group=p[2])
 
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        perms()
-        ret = f(*args, **kwargs)
-        perms()
-        return ret
-
-    return wrapper
+    perms()
+    yield
+    perms()
 
 
-@apply_dir_perms
 @hook('config-changed')
 def install():
     hookenv.status_set('maintenance', 'Installing packages')
@@ -76,8 +71,9 @@ def install():
     ]
     fetch.apt_install(fetch.filter_installed_packages(apt_packages))
 
-    if not path.exists(path.join(VENV_PATH, 'bin')):
-        check_call(['/usr/bin/python3', '-m', 'venv', VENV_PATH])
+    with ensure_user_and_perms(PATHS):
+        if not path.exists(path.join(VENV_PATH, 'bin')):
+            check_call(['/usr/bin/python3', '-m', 'venv', VENV_PATH])
 
     version = hookenv.config('version')
     if not version:
@@ -90,7 +86,6 @@ def install():
     packages.pip_install('errbot=={}'.format(version), venv=VENV_PATH)
 
 
-@apply_dir_perms
 @hook('config-changed')
 def config():
     hookenv.status_set('maintenance',
@@ -99,8 +94,9 @@ def config():
     context['data_path'] = DATA_PATH
     context['plugin_path'] = PLUGIN_PATH
     context['log_path'] = LOG_PATH
-    render(source='config.py.j2',
-           target=path.join(ETC_PATH, 'config.py'),
-           owner='errbot',
-           perms=0o755,
-           context=context)
+    with ensure_user_and_perms(PATHS):
+        render(source='config.py.j2',
+               target=path.join(ETC_PATH, 'config.py'),
+               owner='errbot',
+               perms=0o755,
+               context=context)

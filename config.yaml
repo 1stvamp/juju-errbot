@@ -2,3 +2,125 @@ options:
   version:
     type: string
     description: errbot version to install
+  backend:
+    type: string
+    description: |
+      The type of chat server errbot will connect with. Choose from:
+      IRC, TOX, XMPP, Telgram, Campfire, Hipchat, Slack, Gitter, Text or Graphic.
+    default: IRC
+  chatrooms:
+    type: string
+    description: Comma separated list of room names to join.
+    default: ""
+  nickname:
+    type: string
+    description: The bot's nickname.
+    default: errbot
+  prefix:
+    type: string
+    description: |
+      Command prefix to use, e.g. if set to "!", !dosomething will run the dosomething
+      command in a room or on private message to the bot.
+    default: "!"
+  prefix_optional_on_chat:
+    type: boolean
+    description: Whether to allow ommitting the prefix if talking in private chat.
+    default: true
+  alt_prefixes:
+    type: string
+    description: Comma separated list of alternative command prefixes to allow.
+    default: ""
+  fullname:
+    type: string
+    description: |
+      Full name for display in chatrooms, mostly important for Hipchat/XMPP which
+      use it for connecting and joining rooms, if not set will default to nickname.
+  server:
+    type: string
+    description: Server address/hostname to connect to the chat server with.
+  server_port:
+    type: int
+    description: Optional port number to connect to the chat server with.
+  server_tls:
+    type: boolean
+    description: If true, connect to the chat server with TLS/SSL.
+    default: true
+  username:
+    type: string
+    description: Optional username to connect to the chat server with.
+  password:
+    type: string
+    description: Optional password to connect to the chat server with.
+  nickserv_password:
+    type: string
+    description: Optional NickServ password, if using the IRC backend.
+  hipchat_endpoint:
+    type: string
+    description: Optional Hipchat endpoint if using self-hosted Hipchat.
+    default: https://api.hipchat.com
+  token:
+    type: string
+    description: Connection token for Slack and Telegram chat servers.
+  hipchat_token:
+    type: string
+    description: API token for Hipchat if using group admin functions in plugins.
+  auto_install_plugin_deps:
+    type: boolean
+    description: If true, errbot will install plugin dependencies automatically.
+    default: false
+  sentry_dsn:
+    type: string
+    description: A Sentry/Raven DSN to use for logging with getsentry.com or self-hosted Sentry.
+  admins:
+    type: string
+    description: Comma separated list of bot admins.
+    default: ""
+  default_access_controls:
+    type: string
+    description: |
+      Python dict defining *default* access controls for commands/plugins.
+      "{}" means allow all by default.
+    default: "{}"
+  access_controls:
+    type: string
+    description: Python dict defining access controls for rooms, users and plugins/commands.
+  hide_restricted_commands:
+    type: boolean
+    description: If true, commands restricted by access control will not show in help output.
+    default: false
+  hide_restricted_access:
+    type: boolean
+    description: If true, no error will be displayed if a user attempts a command they don't have access to.
+    default: false
+  divert_to_private:
+    type: string
+    description: |
+      Comma separated list of commands that should always be responded to
+      in private, even if issued in multi-user chat.
+    default: ""
+  chatroom_relay:
+    type: string
+    description: |
+      Python dict defining users whose output should be relayed to
+      certain rooms, This can be useful with XMPP notifiers like for
+      example the standard Altassian Jira which don't have native support for MUC.
+  reverse_chatroom_relay:
+    type: string
+    description: |
+      Python dict defining rooms to forward output to specific users.
+      It can be useful if you client like gtalk doesn't support MUC correctly.
+  message_size_limit:
+    type: int
+    description: Optional message length, anything above will be broken up into smaller messages.
+  groupchat_nick_prefixed:
+    type: boolean
+    description: If true, responses in a multi-user chat can be directed at specific users.
+    default: true
+  compact_output:
+    type: boolean
+    description: If true table borders are not displayed in responses.
+    default: true
+  suppress_cmd_not_found:
+    type: boolean
+    description: If true errbot will not display an error for unknown commands.
+    default: false

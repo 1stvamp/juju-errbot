@@ -95,15 +95,18 @@ BOT_IDENTITY = {
     'port': {{ server_port }},
 {% endif %}
 {% if ssl %}
-    'ssl': {{ ssl }},
+    'ssl': {{ server_tls }},
 {% endif %}
-{% if nickserv_password %}
+{% if backend.lower() == 'irc' and nickserv_password %}
     'nickserv_password': {{ nickserv_password }},
 {% endif %}
-{% if endpoint %}
-    'endpoint' : '{{ endpoint }}',
+{% if backend.lower() == 'hipchat' %}
+    'endpoint' : '{{ hipchat_endpoint }}',
 {% endif %}
-{% if token %}
+{% if backend.lower() == 'hipchat' and hipchat_token %}
+    'token' : '{{ hipchat_token }}',
+{% endif %}
+{% if backend.lower() in ('slack', 'telegram') %}
     'token': '{{ token }}',
 {% endif %}
 }
@@ -124,7 +127,7 @@ CHATROOM_PRESENCE = {{ chatrooms.split(',') }}
 # implementations, notably HipChat, are very picky about what name you
 # use. In the case of HipChat, make sure this matches exactly with the
 # name you gave the user.
-CHATROOM_FN = '{{ fullname }}'
+CHATROOM_FN = '{{ fullname|default(nickname) }}'
 
 ##########################################################################
 # Prefix configuration                                                   #
@@ -187,8 +190,8 @@ BOT_ALT_PREFIX_CASEINSENSITIVE = True
 #                   'uptime': {'allowusers': BOT_ADMINS},
 #                   'help': {'allowmuc': False},
 #                  }
-{% if access_controls_default %}
-ACCESS_CONTROLS_DEFAULT = {{ access_controls }}
+{% if default_access_controls %}
+ACCESS_CONTROLS_DEFAULT = {{ default_access_controls }}
 {% endif %}
 {% if access_controls %}
 ACCESS_CONTROLS = {{ access_controls }}
