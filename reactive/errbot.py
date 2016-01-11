@@ -83,7 +83,8 @@ def install():
 
     with ensure_user_and_perms(PATHS):
         if not path.exists(path.join(VENV_PATH, 'bin')):
-            check_call(['/usr/bin/python3', '-m', 'venv', VENV_PATH])
+            check_call(['/usr/bin/python3', '-m', 'venv',
+                        '--system-site-packages', VENV_PATH])
 
     version = hookenv.config('version')
     if not version:
@@ -95,6 +96,30 @@ def install():
                        'Installing configured version of errbot')
     packages.pip_install('errbot=={}'.format(version), venv=VENV_PATH,
                          upgrade=True)
+
+    backend = hookenv.config('backend').lower()
+    if backend == 'irc':
+        packages.pip_install('irc', venv=VENV_PATH, upgrade=True)
+
+    if backend == 'hipchat':
+        packages.pip_install('hypchat', venv=VENV_PATH, upgrade=True)
+
+    if backend == 'slack':
+        packages.pip_install('slackclient', venv=VENV_PATH, upgrade=True)
+
+    if backend == 'telegram':
+        packages.pip_install('python-telegram-bot', venv=VENV_PATH,
+                             upgrade=True)
+
+    if backend in ('xmpp', 'hipchat'):
+        xmpp_pkgs = [
+            'python3-dns',
+            'python3-sleekxmpp',
+            'python3-pyasn1',
+            'python3-pyasn1-modules',
+        ]
+        fetch.apt_install(fetch.filter_installed_packages(xmpp_pkgs))
+
     set_state('errbot.installed')
 
 
