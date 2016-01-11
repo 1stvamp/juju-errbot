@@ -14,7 +14,7 @@ from charmhelpers.core.host import (
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.python import packages
 
-from charms.reactive import hook, set_state
+from charms.reactive import hook, set_state, when
 
 
 BASE_PATH = '/srv/errbot'
@@ -94,7 +94,7 @@ def install():
     set_state('errbot.installed')
 
 
-@hook('config-changed')
+@when('errbot.installed')
 def config():
     hookenv.status_set('maintenance',
                        'Generating errbot configuration file')
