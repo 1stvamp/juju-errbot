@@ -9,8 +9,6 @@ tags:
   - ops
   - monitoring
 requires:
-  database:
-    interface: pgsql
   website:
     interface: http
   nrpe:
