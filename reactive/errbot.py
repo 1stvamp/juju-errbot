@@ -5,11 +5,16 @@ from subprocess import check_call
 
 from charmhelpers import fetch
 from charmhelpers.core import hookenv
-from charmhelpers.core.host import adduser, add_group, lsb_release
+from charmhelpers.core.host import (
+    adduser,
+    add_group,
+    lsb_release,
+    service_reload,
+)
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.python import packages
 
-from charms.reactive import hook
+from charms.reactive import hook, set_state
 
 
 BASE_PATH = '/srv/errbot'
@@ -19,6 +24,7 @@ DATA_PATH = path.join(VAR_PATH, 'data')
 PLUGIN_PATH = path.join(VAR_PATH, 'plugins')
 ETC_PATH = path.join(BASE_PATH, 'etc')
 VENV_PATH = path.join(BASE_PATH, 'venv')
+CONFIG_PATH = path.join(ETC_PATH, 'config.py')
 PATHS = (
     (VAR_PATH, 'ubunet', 'ubunet'),
     (LOG_PATH, 'errbot', 'errbot'),
@@ -83,20 +89,39 @@ def install():
 
     hookenv.status_set('maintenance',
                        'Installing configured version of errbot')
-    packages.pip_install('errbot=={}'.format(version), venv=VENV_PATH)
+    packages.pip_install('errbot=={}'.format(version), venv=VENV_PATH,
+                         upgrade=True)
+    set_state('errbot.installed')
 
 
 @hook('config-changed')
 def config():
     hookenv.status_set('maintenance',
                        'Generating errbot configuration file')
-    context = hookenv.config()
-    context['data_path'] = DATA_PATH
-    context['plugin_path'] = PLUGIN_PATH
-    context['log_path'] = LOG_PATH
+    config_ctx = hookenv.config()
+    config_ctx['data_path'] = DATA_PATH
+    config_ctx['plugin_path'] = PLUGIN_PATH
+    config_ctx['log_path'] = LOG_PATH
+
+    upstart_ctx = {
+        'venv_path': VENV_PATH,
+        'user': 'errbot',
+        'group': 'errbot',
+        'working_dir': BASE_PATH,
+        'config_path': CONFIG_PATH,
+    }
+
     with ensure_user_and_perms(PATHS):
         render(source='config.py.j2',
-               target=path.join(ETC_PATH, 'config.py'),
+               target=CONFIG_PATH,
                owner='errbot',
-               perms=0o755,
-               context=context)
+               perms=0o744,
+               context=config_ctx)
+        render(source='errbot_upstart.j2',
+               target='/etc/init/errbot.conf',
+               owner='root',
+               perms=0o744,
+               context=upstart_ctx)
+
+    service_reload('errbot', restart_on_failure=True)
+    set_state('errbot.available')
