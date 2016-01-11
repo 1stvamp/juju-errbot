@@ -215,17 +215,21 @@ DIVERT_TO_PRIVATE = {{ divert_to_private.split(',') }}
 # to MUCs. This can be useful with XMPP notifiers like for example  the
 # standard Altassian Jira which don't have native support for MUC.
 # For example: CHATROOM_RELAY = {'gbin@localhost' : (_TEST_ROOM,)}
-{% if chatroom_relay %}
+{%- if chatroom_relay %}
 CHATROOM_RELAY = {{ chatroom_relay }}
-{% endif %}
+{% else %}
+CHATROOM_RELAY = {}
+{% endif -%}
 
 # Reverse chat relay
 # This feature forwards whatever is said to a specific user.
 # It can be useful if you client like gtalk doesn't support MUC correctly
 # For example: REVERSE_CHATROOM_RELAY = {_TEST_ROOM : ('gbin@localhost',)}
-{% if reverse_chatroom_relay %}
+{%- if reverse_chatroom_relay %}
 REVERSE_CHATROOM_RELAY = {{ reverse_chatroom_relay }}
-{% endif %}
+{% else %}
+REVERSE_CHATROOM_RELAY = {}
+{% endif -%}
 
 ##########################################################################
 # Miscellaneous configuration options                                    #
