@@ -84,31 +84,31 @@ BOT_ASYNC = True
 # The identity, or credentials, used to connect to a server
 BOT_IDENTITY = {
     'nickname' : '{{ nickname }}',
-{% if username %}
+{%- if username %}
     'username' : '{{ username }}',
-{% endif %}
-{% if password %}
+{% endif -%}
+{%- if password %}
     'password' : '{{ password }}',
-{% endif %}
+{% endif -%}
     'server' : '{{ server }}',
-{% if server_port %}
+{%- if server_port %}
     'port': {{ server_port }},
-{% endif %}
-{% if ssl %}
+{% endif -%}
+{%- if ssl %}
     'ssl': {{ server_tls }},
-{% endif %}
-{% if backend.lower() == 'irc' and nickserv_password %}
+{% endif -%}
+{%- if backend.lower() == 'irc' and nickserv_password %}
     'nickserv_password': {{ nickserv_password }},
-{% endif %}
-{% if backend.lower() == 'hipchat' %}
+{% endif -%}
+{%- if backend.lower() == 'hipchat' %}
     'endpoint' : '{{ hipchat_endpoint }}',
-{% endif %}
-{% if backend.lower() == 'hipchat' and hipchat_token %}
+{% endif -%}
+{%- if backend.lower() == 'hipchat' and hipchat_token %}
     'token' : '{{ hipchat_token }}',
-{% endif %}
-{% if backend.lower() in ('slack', 'telegram') %}
+{% endif -%}
+{%- if backend.lower() in ('slack', 'telegram') %}
     'token': '{{ token }}',
-{% endif %}
+{% endif -%}
 }
 
 # Set the admins of your bot. Only these users will have access
@@ -234,7 +234,9 @@ REVERSE_CHATROOM_RELAY = {{ reverse_chatroom_relay }}
 # Define the maximum length a single message may be. If a plugin tries to
 # send a message longer than this length, it will be broken up into multiple
 # shorter messages that do fit.
+{% if message_size_limit -%}
 MESSAGE_SIZE_LIMIT = {{ message_size_limit }}
+{%- endif %}
 
 # XMPP TLS certificate verification. In order to validate offered certificates,
 # you must supply a path to a file containing certificate authorities. By

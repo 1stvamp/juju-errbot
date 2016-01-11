@@ -102,7 +102,7 @@ def install():
 @restart_on_change({
     CONFIG_PATH: ['errbot'],
     UPSTART_PATH: ['errbot'],
-}, stopstart=False)
+}, stopstart=True)
 def config():
     hookenv.status_set('maintenance',
                        'Generating errbot configuration file')
