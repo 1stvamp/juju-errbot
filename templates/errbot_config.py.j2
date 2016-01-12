@@ -108,7 +108,7 @@ BOT_IDENTITY = {
 {% endif -%}
 {%- if backend.lower() in ('slack', 'telegram') %}
     'token': '{{ token }}',
-{% endif -%}
+{%- endif %}
 }
 
 # Set the admins of your bot. Only these users will have access
