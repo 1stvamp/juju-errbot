@@ -14,7 +14,7 @@ from charmhelpers.core.host import (
     user_exists,
 )
 from charmhelpers.core.templating import render
-from charmhelpers.contrib.python import packages
+from charmhelpers.contrib.python.packages import pip_install
 
 from charms.reactive import hook, set_state, when
 
@@ -81,11 +81,6 @@ def install():
     ]
     fetch.apt_install(fetch.filter_installed_packages(apt_packages))
 
-    with ensure_user_and_perms(PATHS):
-        if not path.exists(path.join(VENV_PATH, 'bin')):
-            check_call(['/usr/bin/python3', '-m', 'venv',
-                        '--system-site-packages', VENV_PATH])
-
     version = hookenv.config('version')
     if not version:
         hookenv.log('version not set, skipping install of errbot',
@@ -93,23 +88,28 @@ def install():
         return
 
     hookenv.status_set('maintenance',
-                       'Installing configured version of errbot')
-    packages.pip_install('errbot=={}'.format(version), venv=VENV_PATH,
-                         upgrade=True)
+                       'Installing configured version of errbot and'
+                       ' dependencies')
 
+    # Make sure we have a python3 virtualenv to install into
+    with ensure_user_and_perms(PATHS):
+        if not path.exists(path.join(VENV_PATH, 'bin')):
+            check_call(['/usr/bin/python3', '-m', 'venv', VENV_PATH])
+            # Do this after so we have ensure we have pip *and* sys packages
+            check_call(['/usr/bin/python3', '-m', 'venv',
+                        '--system-site-packages', VENV_PATH])
+
+    pip_pkgs = ['errbot=={}'.format(version)]
     backend = hookenv.config('backend').lower()
-    if backend == 'irc':
-        packages.pip_install('irc', venv=VENV_PATH, upgrade=True)
 
-    if backend == 'hipchat':
-        packages.pip_install('hypchat', venv=VENV_PATH, upgrade=True)
-
-    if backend == 'slack':
-        packages.pip_install('slackclient', venv=VENV_PATH, upgrade=True)
-
-    if backend == 'telegram':
-        packages.pip_install('python-telegram-bot', venv=VENV_PATH,
-                             upgrade=True)
+    pip_pkg_map = {
+        'irc': 'irc',
+        'hipchat': 'hypchat',
+        'slack': 'slackclient',
+        'telegram': 'python-telegram-bot',
+    }
+    if backend in pip_pkg_map:
+        pip_pkgs.append(pip_pkg_map[backend])
 
     if backend in ('xmpp', 'hipchat'):
         xmpp_pkgs = [
@@ -120,6 +120,7 @@ def install():
         ]
         fetch.apt_install(fetch.filter_installed_packages(xmpp_pkgs))
 
+    pip_install(pip_pkgs, venv=VENV_PATH, upgrade=True)
     set_state('errbot.installed')
 
 
