@@ -81,6 +81,15 @@ def install():
     ]
     fetch.apt_install(fetch.filter_installed_packages(apt_packages))
 
+    # Make sure we have a python3 virtualenv to install into
+    with ensure_user_and_perms(PATHS):
+        if not path.exists(path.join(VENV_PATH, 'bin')):
+            check_call(['/usr/bin/python3', '-m', 'venv', VENV_PATH])
+            # Kill system six wheel copied into venv, as it's too old
+            wheels_path = path.join(VENV_PATH, path.join('lib',
+                                    'python-wheels'))
+            check_call(['rm', '-f', path.join(wheels_path, 'six-1.5*')])
+
     version = hookenv.config('version')
     if not version:
         hookenv.log('version not set, skipping install of errbot',
@@ -91,15 +100,9 @@ def install():
                        'Installing configured version of errbot and'
                        ' dependencies')
 
-    # Make sure we have a python3 virtualenv to install into
-    with ensure_user_and_perms(PATHS):
-        if not path.exists(path.join(VENV_PATH, 'bin')):
-            check_call(['/usr/bin/python3', '-m', 'venv', VENV_PATH])
-            # Do this after so we have ensure we have pip *and* sys packages
-            check_call(['/usr/bin/python3', '-m', 'venv',
-                        '--system-site-packages', VENV_PATH])
-
-    pip_pkgs = ['errbot=={}'.format(version)]
+    pip_pkgs = [
+        'errbot=={}'.format(version),
+    ]
     backend = hookenv.config('backend').lower()
 
     pip_pkg_map = {
@@ -112,6 +115,8 @@ def install():
         pip_pkgs.append(pip_pkg_map[backend])
 
     if backend in ('xmpp', 'hipchat'):
+        check_call(['/usr/bin/python3', '-m', 'venv',
+                    '--system-site-packages', VENV_PATH])
         xmpp_pkgs = [
             'python3-dns',
             'python3-sleekxmpp',
@@ -120,7 +125,7 @@ def install():
         ]
         fetch.apt_install(fetch.filter_installed_packages(xmpp_pkgs))
 
-    pip_install(pip_pkgs, venv=VENV_PATH, upgrade=True)
+    pip_install(pip_pkgs, venv=VENV_PATH)
     set_state('errbot.installed')
 
 

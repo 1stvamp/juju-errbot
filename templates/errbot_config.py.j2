@@ -84,28 +84,28 @@ BOT_ASYNC = True
 # The identity, or credentials, used to connect to a server
 BOT_IDENTITY = {
     'nickname' : '{{ nickname }}',
+    'server' : '{{ server }}',
 {%- if username %}
     'username' : '{{ username }}',
 {% endif -%}
 {%- if password %}
     'password' : '{{ password }}',
-{% endif -%}
-    'server' : '{{ server }}',
+{% endif %}
 {%- if server_port %}
     'port': {{ server_port }},
-{% endif -%}
-{%- if ssl %}
+{% endif %}
+{%- if server_tls %}
     'ssl': {{ server_tls }},
-{% endif -%}
+{% endif %}
 {%- if backend.lower() == 'irc' and nickserv_password %}
     'nickserv_password': {{ nickserv_password }},
-{% endif -%}
+{% endif %}
 {%- if backend.lower() == 'hipchat' %}
     'endpoint' : '{{ hipchat_endpoint }}',
-{% endif -%}
+{% endif %}
 {%- if backend.lower() == 'hipchat' and hipchat_token %}
     'token' : '{{ hipchat_token }}',
-{% endif -%}
+{% endif %}
 {%- if backend.lower() in ('slack', 'telegram') %}
     'token': '{{ token }}',
 {%- endif %}
