@@ -62,8 +62,8 @@ def ensure_user_and_perms(paths):
     perms()
 
 
-@hook
-def config_changed():
+@hook('config-changed')
+def install_errbot():
     hookenv.status_set('maintenance', 'Installing packages')
     codename = lsb_release()['DISTRIB_CODENAME']
     if codename == 'trusty':
