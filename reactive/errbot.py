@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from glob import glob
 from grp import getgrnam
 from os import makedirs, path
 from subprocess import check_call
@@ -84,11 +85,16 @@ def install():
     # Make sure we have a python3 virtualenv to install into
     with ensure_user_and_perms(PATHS):
         if not path.exists(path.join(VENV_PATH, 'bin')):
+            hookenv.log('Creating python3 venv')
             check_call(['/usr/bin/python3', '-m', 'venv', VENV_PATH])
+            pip_install('six', venv=VENV_PATH, upgrade=True)
             # Kill system six wheel copied into venv, as it's too old
-            wheels_path = path.join(VENV_PATH, path.join('lib',
-                                    'python-wheels'))
-            check_call(['rm', '-f', path.join(wheels_path, 'six-1.5*')])
+            wheels_path = path.join(path.join(VENV_PATH, 'lib'),
+                                    'python-wheels')
+            hookenv.log('Removing pip-1.5 wheel from venv')
+            six_paths = glob(path.join(wheels_path, 'six-1.5*'))
+            for p in six_paths:
+                check_call(['rm', '-f', path.join(wheels_path, p)])
 
     version = hookenv.config('version')
     if not version:
@@ -164,3 +170,15 @@ def config():
                context=upstart_ctx)
 
     set_state('errbot.available')
+
+
+@when('local-monitors.available', 'errbot.available')
+def setup_nagios(nagios):
+    unit_name = hookenv.local_unit()
+    nagios.add_check(['/usr/lib/nagios/plugins/check_procs',
+                      '-c', '1:', '-a', 'bin/errbot'],
+                     name="check_errbot_procs",
+                     description="Verify at least one errbot process is "
+                                 "running",
+                     context=hookenv.config("nagios_context"),
+                     unit=unit_name)

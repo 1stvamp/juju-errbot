@@ -1,4 +1,4 @@
 includes: 
   - 'layer:basic'
-  - 'interface:nrpe-external-master'
+  - 'interface:local-monitors'
   - 'interface:http'

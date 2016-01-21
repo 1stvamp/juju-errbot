@@ -9,7 +9,7 @@ tags:
   - ops
   - monitoring
 requires:
-  website:
+  webhooks:
     interface: http
-  nrpe:
-    interface: nrpe-external-master
+  local-monitors:
+    interface: local-monitors
