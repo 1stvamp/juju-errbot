@@ -91,7 +91,7 @@ def config_changed():
             # Kill system six wheel copied into venv, as it's too old
             wheels_path = path.join(path.join(VENV_PATH, 'lib'),
                                     'python-wheels')
-            hookenv.log('Removing pip-1.5 wheel from venv')
+            hookenv.log('Removing six-1.5 wheel from venv')
             six_paths = glob(path.join(wheels_path, 'six-1.5*'))
             for p in six_paths:
                 check_call(['rm', '-f', path.join(wheels_path, p)])
