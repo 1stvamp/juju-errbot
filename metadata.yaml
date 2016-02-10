@@ -8,8 +8,10 @@ tags:
   - social
   - ops
   - monitoring
-requires:
+provides:
   webhooks:
     interface: http
   local-monitors:
     interface: local-monitors
+  nrpe-external-master:
+    interface: nrpe-external-master

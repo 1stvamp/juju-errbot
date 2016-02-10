@@ -124,3 +124,7 @@ options:
     type: boolean
     description: If true errbot will not display an error for unknown commands.
     default: false
+  nagios_context:
+    type: string
+    description: Context for Nagios checks
+    default: errbot

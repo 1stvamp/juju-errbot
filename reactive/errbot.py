@@ -173,7 +173,17 @@ def config():
 
 
 @when('local-monitors.available', 'errbot.available')
+def local_monitors(nagios):
+    setup_nagios(nagios)
+
+
+@when('nrpe-external-master.available', 'errbot.available')
+def nrpe_external_master(nagios):
+    setup_nagios(nagios)
+
+
 def setup_nagios(nagios):
+    hookenv.status_set('maintenance', 'Creating Nagios check')
     unit_name = hookenv.local_unit()
     nagios.add_check(['/usr/lib/nagios/plugins/check_procs',
                       '-c', '1:', '-a', 'bin/errbot'],
