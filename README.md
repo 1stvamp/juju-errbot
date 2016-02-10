@@ -9,5 +9,7 @@ sudo apt update
 sudo apt install charm-tools
 mkdir -p ~/charms/layers
 cd !$
+git clone https://github.com/1stvamp/juju-errbot.git
+cd juju-errbot
 charm build
 ```
