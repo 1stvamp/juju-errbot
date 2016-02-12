@@ -181,6 +181,7 @@ def config():
     set_state('errbot.available')
 
 
+@when('errbot.available')
 @when_file_changed([PLUGINS_CONFIG_PATH])
 def configure_plugins():
     hookenv.status_set('maintenance', 'Installing/configuration plugins')
