@@ -2,7 +2,8 @@ from contextlib import contextmanager
 from glob import glob
 from grp import getgrnam
 from os import makedirs, path
-from subprocess import check_call
+from re import search
+from subprocess import check_call, check_output
 
 from charmhelpers import fetch
 from charmhelpers.core import hookenv
@@ -29,6 +30,8 @@ DATA_PATH = path.join(VAR_PATH, 'data')
 PLUGIN_PATH = path.join(VAR_PATH, 'plugins')
 ETC_PATH = path.join(BASE_PATH, 'etc')
 VENV_PATH = path.join(BASE_PATH, 'venv')
+PIP_PATH = path.join(path.join(VENV_PATH, 'bin'), 'pip')
+ERRBOT_PATH = path.join(VENV_PATH, path.join('bin', 'errbot'))
 CONFIG_PATH = path.join(ETC_PATH, 'config.py')
 PLUGINS_CONFIG_PATH = path.join(ETC_PATH, 'plugins_config.py')
 UPSTART_PATH = '/etc/init/errbot.conf'
@@ -88,7 +91,7 @@ def install_errbot():
 
     # Make sure we have a python3 virtualenv to install into
     with ensure_user_and_perms(PATHS):
-        if not path.exists(path.join(VENV_PATH, 'bin')):
+        if not path.exists(PIP_PATH):
             hookenv.log('Creating python3 venv')
             check_call(['/usr/bin/python3', '-m', 'venv', VENV_PATH])
             pip_install('six', venv=VENV_PATH, upgrade=True)
@@ -106,36 +109,44 @@ def install_errbot():
                     level='WARNING')
         return
 
-    hookenv.status_set('maintenance',
-                       'Installing configured version of errbot and'
-                       ' dependencies')
+    current_version = ''
+    if path.exists(ERRBOT_PATH):
+        pip_show = check_output([PIP_PATH, 'show', 'errbot'])
+        current_version_match = search('Version: (.*)',
+                                       pip_show.decode('ascii'))
+        if current_version_match.groups():
+            current_version = current_version_match.groups()[0]
 
-    pip_pkgs = [
-        'errbot=={}'.format(version),
-    ]
-    backend = hookenv.config('backend').lower()
-
-    pip_pkg_map = {
-        'irc': 'irc',
-        'hipchat': 'hypchat',
-        'slack': 'slackclient',
-        'telegram': 'python-telegram-bot',
-    }
-    if backend in pip_pkg_map:
-        pip_pkgs.append(pip_pkg_map[backend])
-
-    if backend in ('xmpp', 'hipchat'):
-        check_call(['/usr/bin/python3', '-m', 'venv',
-                    '--system-site-packages', VENV_PATH])
-        xmpp_pkgs = [
-            'python3-dns',
-            'python3-sleekxmpp',
-            'python3-pyasn1',
-            'python3-pyasn1-modules',
+    if version != current_version:
+        hookenv.status_set('maintenance',
+                           'Installing configured version of errbot and'
+                           ' dependencies')
+        pip_pkgs = [
+            'errbot=={}'.format(version),
         ]
-        fetch.apt_install(fetch.filter_installed_packages(xmpp_pkgs))
+        backend = hookenv.config('backend').lower()
 
-    pip_install(pip_pkgs, venv=VENV_PATH)
+        pip_pkg_map = {
+            'irc': 'irc',
+            'hipchat': 'hypchat',
+            'slack': 'slackclient',
+            'telegram': 'python-telegram-bot',
+        }
+        if backend in pip_pkg_map:
+            pip_pkgs.append(pip_pkg_map[backend])
+
+        if backend in ('xmpp', 'hipchat'):
+            check_call(['/usr/bin/python3', '-m', 'venv',
+                        '--system-site-packages', VENV_PATH])
+            xmpp_pkgs = [
+                'python3-dns',
+                'python3-sleekxmpp',
+                'python3-pyasn1',
+                'python3-pyasn1-modules',
+            ]
+            fetch.apt_install(fetch.filter_installed_packages(xmpp_pkgs))
+
+        pip_install(pip_pkgs, venv=VENV_PATH)
     set_state('errbot.installed')
 
 
@@ -187,10 +198,9 @@ def configure_plugins():
     # Shutdown errbot while we configure plugins, so we don't have concurrency
     # issues with the data files being updated
     service_stop('errbot')
-    errbot_path = path.join(VENV_PATH, path.join('bin', 'errbot'))
     try:
-        hookenv.log(check_call([errbot_path, '--config', CONFIG_PATH,
-                                '--restore', PLUGINS_CONFIG_PATH]),
+        hookenv.log(check_output([ERRBOT_PATH, '--config', CONFIG_PATH,
+                                  '--restore', PLUGINS_CONFIG_PATH]),
                     level='INFO')
     except Exception as e:
         hookenv.log('Error updating plugins: {}'.format(e),
