@@ -12,12 +12,14 @@ from charmhelpers.core.host import (
     chownr,
     lsb_release,
     restart_on_change,
+    service_start,
+    service_stop,
     user_exists,
 )
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.python.packages import pip_install
 
-from charms.reactive import hook, set_state, when
+from charms.reactive import hook, set_state, when, when_file_changed
 
 
 BASE_PATH = '/srv/errbot'
@@ -28,6 +30,7 @@ PLUGIN_PATH = path.join(VAR_PATH, 'plugins')
 ETC_PATH = path.join(BASE_PATH, 'etc')
 VENV_PATH = path.join(BASE_PATH, 'venv')
 CONFIG_PATH = path.join(ETC_PATH, 'config.py')
+PLUGINS_CONFIG_PATH = path.join(ETC_PATH, 'plugins_config.py')
 UPSTART_PATH = '/etc/init/errbot.conf'
 PATHS = (
     (VAR_PATH, 'ubunet', 'ubunet'),
@@ -78,6 +81,7 @@ def install_errbot():
         'libssl-dev',
         'libffi-dev',
         'python3-dev',
+        'git',
         venv_pkg,
     ]
     fetch.apt_install(fetch.filter_installed_packages(apt_packages))
@@ -163,6 +167,11 @@ def config():
                owner='errbot',
                perms=0o744,
                context=config_ctx)
+        render(source='errbot_plugins_config.py.j2',
+               target=PLUGINS_CONFIG_PATH,
+               owner='errbot',
+               perms=0o744,
+               context=config_ctx)
         render(source='errbot_upstart.j2',
                target=UPSTART_PATH,
                owner='root',
@@ -170,6 +179,21 @@ def config():
                context=upstart_ctx)
 
     set_state('errbot.available')
+
+
+@when_file_changed([PLUGINS_CONFIG_PATH])
+def configure_plugins():
+    # Shutdown errbot while we configure plugins, so we don't have concurrency
+    # issue with the data files being updated
+    service_stop('errbot')
+    errbot_path = path.join(VENV_PATH, path.join('bin', 'errbot'))
+    try:
+        check_call([errbot_path, '--config', CONFIG_PATH, '--restore',
+                   PLUGINS_CONFIG_PATH])
+    except Exception as e:
+        hookenv.log('Error updating plugins: {}'.format(e),
+                    level='ERROR')
+    service_start('errbot')
 
 
 @when('local-monitors.available', 'errbot.available')
