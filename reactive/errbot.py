@@ -185,7 +185,7 @@ def config():
 def configure_plugins():
     hookenv.status_set('maintenance', 'Installing/configuration plugins')
     # Shutdown errbot while we configure plugins, so we don't have concurrency
-    # issue with the data files being updated
+    # issues with the data files being updated
     service_stop('errbot')
     errbot_path = path.join(VENV_PATH, path.join('bin', 'errbot'))
     try:
