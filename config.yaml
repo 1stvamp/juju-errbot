@@ -132,3 +132,11 @@ options:
     type: boolean
     description: Enable errbot's webserver, required for webhooks
     default: true
+  plugin_repos:
+    type: string
+    description: Python dict defining extra plugin repos to install.
+    default: "{}"
+  plugins_config:
+    type: string
+    description: Python dict defining plugin configuration.
+    default: "{}"

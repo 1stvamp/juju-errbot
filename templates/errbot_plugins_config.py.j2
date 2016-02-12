@@ -1,0 +1,21 @@
+log.info("Restoring core configs.")
+
+bot["configs"] = {{ plugins_config }}
+{% if enable_webserver %}
+# Allow Webserver config to be overridden from juju set
+if 'Webserver' not in bot["configs"]:
+    bot["configs"]["Webserver"] = {
+        'HOST': '0.0.0.0',
+        'PORT': 8080,
+        'SSL': {'enabled': False}
+    }
+{% endif %}
+
+bot["repos"] = {{ plugin_repos }}
+
+log.info("Installing plugins.")
+if "repos" in bot:
+  for repo in bot["repos"]:
+    errors = bot.install_repo(repo)
+    for error in errors:
+      log.error(error)
