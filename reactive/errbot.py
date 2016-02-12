@@ -183,6 +183,7 @@ def config():
 
 @when_file_changed([PLUGINS_CONFIG_PATH])
 def configure_plugins():
+    hookenv.status_set('maintenance', 'Installing/configuration plugins')
     # Shutdown errbot while we configure plugins, so we don't have concurrency
     # issue with the data files being updated
     service_stop('errbot')
