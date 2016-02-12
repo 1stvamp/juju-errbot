@@ -181,7 +181,7 @@ def config():
     set_state('errbot.available')
 
 
-@when_file_changed([PLUGINS_CONFIG_PATH])
+@when_file_changed(PLUGINS_CONFIG_PATH)
 def configure_plugins():
     hookenv.status_set('maintenance', 'Installing/configuration plugins')
     # Shutdown errbot while we configure plugins, so we don't have concurrency
