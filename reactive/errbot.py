@@ -190,8 +190,9 @@ def configure_plugins():
     service_stop('errbot')
     errbot_path = path.join(VENV_PATH, path.join('bin', 'errbot'))
     try:
-        check_call([errbot_path, '--config', CONFIG_PATH, '--restore',
-                   PLUGINS_CONFIG_PATH])
+        hookenv.log(check_call([errbot_path, '--config', CONFIG_PATH,
+                                '--restore', PLUGINS_CONFIG_PATH]),
+                    level='INFO')
     except Exception as e:
         hookenv.log('Error updating plugins: {}'.format(e),
                     level='ERROR')
