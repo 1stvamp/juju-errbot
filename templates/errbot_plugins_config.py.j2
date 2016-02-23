@@ -1,3 +1,24 @@
+"""This is hack for getting round the issue that errbot has no easy way to
+install and configure plugins automatically without interacting with a running
+bot instance, we move the existing core DB file out of the way, then
+call this backup restore script, load that file and it's values,
+merge them into the base one given to us by errbot, and then set our
+plugin configuration in the rest of the script from juju config options.
+"""
+
+from os import environ
+from os.path import exists as file_exists
+from shelve import open as open_shelf
+
+
+OLD_DATA_FILE = environ['ERRBOT_OLD_DATA_FILE']
+
+if file_exists(OLD_DATA_FILE):
+    bot2 = open_shelf(OLD_DATA_FILE)
+    for k, v in bot2.items():
+        bot[k] = v
+
+
 log.info("Restoring core configs.")
 
 bot["configs"] = {{ plugins_config }}
@@ -15,7 +36,7 @@ bot["repos"] = {{ plugin_repos }}
 
 log.info("Installing plugins.")
 if "repos" in bot:
-  for repo in bot["repos"]:
-    errors = bot.install_repo(repo)
-    for error in errors:
-      log.error(error)
+    for repo in bot["repos"]:
+        errors = bot.install_repo(repo)
+        for error in errors:
+            log.error(error)

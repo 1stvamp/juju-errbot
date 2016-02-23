@@ -3,6 +3,7 @@ from glob import glob
 from grp import getgrnam
 from os import makedirs, path
 from re import search
+from shutil import move
 from subprocess import check_call, check_output
 
 from charmhelpers import fetch
@@ -198,13 +199,21 @@ def configure_plugins():
     # Shutdown errbot while we configure plugins, so we don't have concurrency
     # issues with the data files being updated
     service_stop('errbot')
+    data_file = path.join(DATA_PATH, 'core.db')
+    old_data_file = '{}.old'.format(data_file)
+    if path.exists(data_file):
+        move(data_file, old_data_file)
     try:
-        hookenv.log(check_output([ERRBOT_PATH, '--config', CONFIG_PATH,
-                                  '--restore', PLUGINS_CONFIG_PATH]),
-                    level='INFO')
+        env = {'ERRBOT_OLD_DATA_FILE': old_data_file}
+        with ensure_user_and_perms(PATHS):
+            check_output([ERRBOT_PATH, '--config', CONFIG_PATH,
+                          '--restore', PLUGINS_CONFIG_PATH],
+                         env=env)
     except Exception as e:
         hookenv.log('Error updating plugins: {}'.format(e),
                     level='ERROR')
+        if path.exists(old_data_file):
+            move(old_data_file, data_file)
     service_start('errbot')
 
 
