@@ -21,15 +21,25 @@ if file_exists(OLD_DATA_FILE):
 
 log.info("Restoring core configs.")
 
-bot["configs"] = {{ plugins_config }}
+
+# Override but don't completely hulk smash all the plugin config options
+base_config = = {{ plugins_config }}
+configs = bot.setdefault("configs", {})
+for k, v in base_config.items():
+    config = configs.setdefault(k, {})
+    for sub_k, sub_v in v.items():
+	config[k] = v
+
 {% if enable_webserver %}
-# Allow Webserver config to be overridden from juju set
-if 'Webserver' not in bot["configs"]:
-    bot["configs"]["Webserver"] = {
-        'HOST': '0.0.0.0',
-        'PORT': 8080,
-        'SSL': {'enabled': False}
-    }
+# Always set Webserver config from juju options
+bot["configs"]["Webserver"] = {
+    'HOST': '0.0.0.0',
+    'PORT': 8080,
+    'SSL': {'enabled': False}
+}
+{% else %}
+if "Webserver" in bot["configs"]:
+    del bot["configs"]["Webserver"]
 {% endif %}
 
 bot["repos"] = {{ plugin_repos }}
