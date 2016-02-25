@@ -21,7 +21,13 @@ from charmhelpers.core.host import (
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.python.packages import pip_install
 
-from charms.reactive import hook, set_state, when, when_file_changed
+from charms.reactive import (
+    only_once,
+    remove_state,
+    set_state,
+    when,
+    when_file_changed,
+)
 
 
 BASE_PATH = '/srv/errbot'
@@ -44,6 +50,7 @@ PATHS = (
     (ETC_PATH, 'ubunet', 'ubunet'),
     (VENV_PATH, 'ubunet', 'ubunet'),
 )
+WEBHOOKS_PORT = 8080
 
 
 @contextmanager
@@ -69,7 +76,7 @@ def ensure_user_and_perms(paths):
     perms()
 
 
-@hook('config-changed')
+@when('config.changed.version')
 def install_errbot():
     hookenv.status_set('maintenance', 'Installing packages')
     codename = lsb_release()['DISTRIB_CODENAME']
@@ -156,7 +163,7 @@ def install_errbot():
     CONFIG_PATH: ['errbot'],
     UPSTART_PATH: ['errbot'],
 }, stopstart=True)
-def config():
+def render_config():
     hookenv.status_set('maintenance',
                        'Generating errbot configuration file')
 
@@ -176,11 +183,6 @@ def config():
     with ensure_user_and_perms(PATHS):
         render(source='errbot_config.py.j2',
                target=CONFIG_PATH,
-               owner='errbot',
-               perms=0o744,
-               context=config_ctx)
-        render(source='errbot_plugins_config.py.j2',
-               target=PLUGINS_CONFIG_PATH,
                owner='errbot',
                perms=0o744,
                context=config_ctx)
@@ -237,3 +239,40 @@ def setup_nagios(nagios):
                                  "running",
                      context=hookenv.config("nagios_context"),
                      unit=unit_name)
+
+
+@when('errbot.available', 'config.changed.enable_webhooks')
+def configure_webserver():
+    render_plugin_config()
+
+    if hookenv.config('enable_webhooks'):
+        hookenv.open_port(WEBHOOKS_PORT)
+        set_state('errbot.webhooks-enabled')
+    else:
+        hookenv.close_port(WEBHOOKS_PORT)
+        remove_state('errbot.webhooks-enabled')
+
+
+@when('errbot.available', 'config.changed.plugin_repos')
+def configure_plugin_repos():
+    render_plugin_config()
+
+
+@when('errbot.available', 'config.changed.plugins_config')
+def configure_plugins_config():
+    render_plugin_config()
+
+
+@only_once
+def render_plugin_config():
+    with ensure_user_and_perms(PATHS):
+        render(source='errbot_plugins_config.py.j2',
+               target=PLUGINS_CONFIG_PATH,
+               owner='errbot',
+               perms=0o744,
+               context=hookenv.config())
+
+
+@when('webhooks.available', 'errbot.webhooks-enabled')
+def configure_webhooks(webhooks):
+        webhooks.configure(port=WEBHOOKS_PORT)
