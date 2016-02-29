@@ -1,0 +1,11 @@
+imports:
+    wheels: .
+
+{{ module }} module wheels:
+    url: {{ url }}
+{%- if revision %}
+    rev: {{ revision }}
+{% endif -%}
+{%- if module == 'curl' %}
+    unpack: tar
+{% endif -%}

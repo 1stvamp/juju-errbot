@@ -6,6 +6,7 @@ from os import makedirs, path
 from re import search
 from shutil import move
 from subprocess import check_call, check_output
+from tempfile import TemporaryFile
 
 from charmhelpers import fetch
 from charmhelpers.core import hookenv
@@ -37,6 +38,7 @@ DATA_PATH = path.join(VAR_PATH, 'data')
 PLUGIN_PATH = path.join(VAR_PATH, 'plugins')
 ETC_PATH = path.join(BASE_PATH, 'etc')
 VENV_PATH = path.join(BASE_PATH, 'venv')
+WHEELS_PATH = path.join(BASE_PATH, 'wheels')
 PIP_PATH = path.join(path.join(VENV_PATH, 'bin'), 'pip')
 ERRBOT_PATH = path.join(VENV_PATH, path.join('bin', 'errbot'))
 CONFIG_PATH = path.join(ETC_PATH, 'config.py')
@@ -49,6 +51,7 @@ PATHS = (
     (PLUGIN_PATH, 'errbot', 'errbot'),
     (ETC_PATH, 'ubunet', 'ubunet'),
     (VENV_PATH, 'ubunet', 'ubunet'),
+    (WHEELS_PATH, 'ubunet', 'ubunet'),
 )
 WEBHOOKS_PORT = 8080
 
@@ -96,7 +99,36 @@ def only_once_this_hook(f):
 
 
 def get_wheels_store():
-    pass
+    """Returns the correct pip argument for a wheels dir or index URL, ensuring
+    vcs stores are checked out appropriately.
+    """
+
+    repo = hookenv.config('wheels_repo')
+
+    if not repo:
+        return
+
+    repo_type = hookenv.config('wheels_repo_type').lower()
+
+    if repo_type in ('git', 'bzr', 'hg', 'svn'):
+        with TemporaryFile() as f:
+            render(source='errbot_peru.yaml.j2', target=f.name,
+                   context={
+                       'url': repo,
+                       'module': ('curl' if repo_type == 'tar' else
+                                  repo_type),
+                       'revision': hookenv.config('wheels_repo_revision'),
+                   })
+            with ensure_user_and_perms(PATHS):
+                check_call(['peru', 'sync', '--file='.format(f.name),
+                            '--sync-dir='.format(WHEELS_PATH)])
+        args = '--no-index --wheels-dir={}'.format(WHEELS_PATH)
+    elif repo_type in ('http', 'https', 'pypi'):
+        args = '--index={}'.format(repo)
+    else:
+        raise ValueError('Unknown wheels_repo_type: {}'.format(repo_type))
+
+    return args
 
 
 @when('config.changed.version')
