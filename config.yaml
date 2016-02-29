@@ -140,3 +140,14 @@ options:
     type: string
     description: Python dict defining plugin configuration.
     default: "{}"
+  wheels_repo:
+    type: string
+    decription: |
+      A repository to pull python wheels from, either an HTTP index (ala PyPI), git repo,
+      bzr repo or hg repo.
+  wheels_repo_type:
+    type: string
+    description: |
+       Type of repo in "wheels_repo", either git, bzr or http. (https and pypi also work as
+       aliases for http).
+    default: http
