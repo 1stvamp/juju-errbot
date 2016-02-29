@@ -1,4 +1,5 @@
 from contextlib import contextmanager
+from functools import wraps
 from glob import glob
 from grp import getgrnam
 from os import makedirs, path
@@ -22,7 +23,6 @@ from charmhelpers.core.templating import render
 from charmhelpers.contrib.python.packages import pip_install
 
 from charms.reactive import (
-    only_once,
     remove_state,
     set_state,
     when,
@@ -74,6 +74,29 @@ def ensure_user_and_perms(paths):
     perms()
     yield
     perms()
+
+
+def only_once_this_hook(f):
+    """Decorator to ensure a function is called only once within a reactive
+    hooks invocation, similar to the only_once decorator but it *will* be run
+    again the next time another hook is invoked.
+    """
+    if not hasattr(f, '_only_once_this_hook__called'):
+        f._only_once_this_hook__called = False
+
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if f._only_once_this_hook__called:
+            return
+
+        f._only_once_this_hook__called = True
+        return f(*args, **kwargs)
+
+    return wrapper
+
+
+def get_wheels_store():
+    pass
 
 
 @when('config.changed.version')
@@ -263,7 +286,7 @@ def configure_plugins_config():
     render_plugin_config()
 
 
-@only_once
+@only_once_this_hook
 def render_plugin_config():
     with ensure_user_and_perms(PATHS):
         render(source='errbot_plugins_config.py.j2',
