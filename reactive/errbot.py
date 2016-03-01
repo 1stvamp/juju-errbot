@@ -1,12 +1,13 @@
+from base64 import b64decode
 from contextlib import contextmanager
 from functools import wraps
 from glob import glob
 from grp import getgrnam
 from os import makedirs, path
 from re import search
-from shutil import move
+from shutil import move, rmtree
 from subprocess import check_call, check_output
-from tempfile import TemporaryFile
+from tempfile import NamedTemporaryFile
 
 from charmhelpers import fetch
 from charmhelpers.core import hookenv
@@ -19,6 +20,7 @@ from charmhelpers.core.host import (
     service_start,
     service_stop,
     user_exists,
+    write_file,
 )
 from charmhelpers.core.templating import render
 from charmhelpers.contrib.python.packages import pip_install
@@ -43,6 +45,7 @@ PIP_PATH = path.join(path.join(VENV_PATH, 'bin'), 'pip')
 ERRBOT_PATH = path.join(VENV_PATH, path.join('bin', 'errbot'))
 CONFIG_PATH = path.join(ETC_PATH, 'config.py')
 PLUGINS_CONFIG_PATH = path.join(ETC_PATH, 'plugins_config.py')
+SSH_HOME_PATH = path.join(path.join('/home', 'ubunet'), '.ssh')
 UPSTART_PATH = '/etc/init/errbot.conf'
 PATHS = (
     (VAR_PATH, 'ubunet', 'ubunet'),
@@ -52,6 +55,7 @@ PATHS = (
     (ETC_PATH, 'ubunet', 'ubunet'),
     (VENV_PATH, 'ubunet', 'ubunet'),
     (WHEELS_PATH, 'ubunet', 'ubunet'),
+    (SSH_HOME_PATH, 'ubunet', 'ubunet'),
 )
 WEBHOOKS_PORT = 8080
 
@@ -98,6 +102,21 @@ def only_once_this_hook(f):
     return wrapper
 
 
+@only_once_this_hook
+def setup_ssh_key():
+    key = hookenv.config('private_ssh_key')
+    if key:
+        key = b64decode(key).decode('ascii')
+        with ensure_user_and_perms(PATHS):
+            key_type = 'rsa' if 'RSA' in key else 'dsa'
+            key_path = path.join(SSH_HOME_PATH, 'id_{}'.format(key_type))
+            write_file(key_path, key.encode('ascii'), owner='ubunet',
+                       perms=600)
+
+    elif path.exists(SSH_HOME_PATH):
+        rmtree(SSH_HOME_PATH)
+
+
 def get_wheels_store():
     """Returns the correct pip argument for a wheels dir or index URL, ensuring
     vcs stores are checked out appropriately.
@@ -111,7 +130,7 @@ def get_wheels_store():
     repo_type = hookenv.config('wheels_repo_type').lower()
 
     if repo_type in ('git', 'bzr', 'hg', 'svn'):
-        with TemporaryFile() as f:
+        with NamedTemporaryFile() as f:
             render(source='errbot_peru.yaml.j2', target=f.name,
                    context={
                        'url': repo,
@@ -119,12 +138,19 @@ def get_wheels_store():
                                   repo_type),
                        'revision': hookenv.config('wheels_repo_revision'),
                    })
+
+            setup_ssh_key()
             with ensure_user_and_perms(PATHS):
-                check_call(['peru', 'sync', '--file='.format(f.name),
-                            '--sync-dir='.format(WHEELS_PATH)])
-        args = '--no-index --wheels-dir={}'.format(WHEELS_PATH)
+                check_call(['sudo', 'su', '-s', '/bin/sh', '-', 'ubunet',
+                            '-c',
+                            ' '.join(('peru',
+                                      '--file={}'.format(f.name),
+                                      '--sync-dir={}'.format(WHEELS_PATH),
+                                      'sync'))])
+
+            args = '--no-index --find-links=file://{}'.format(WHEELS_PATH)
     elif repo_type in ('http', 'https', 'pypi'):
-        args = '--index={}'.format(repo)
+        args = '--index-url={}'.format(repo)
     else:
         raise ValueError('Unknown wheels_repo_type: {}'.format(repo_type))
 
@@ -209,7 +235,7 @@ def install_errbot():
             ]
             fetch.apt_install(fetch.filter_installed_packages(xmpp_pkgs))
 
-        pip_install(pip_pkgs, venv=VENV_PATH)
+        pip_install(get_wheels_store() + pip_pkgs, venv=VENV_PATH)
     set_state('errbot.installed')
 
 

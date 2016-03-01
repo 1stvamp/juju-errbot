@@ -154,3 +154,6 @@ options:
        Type of repo in "wheels_repo", either git, bzr, svn, hg, tar or http.
        (https and pypi also work as aliases for http).
     default: http
+  private_ssh_key:
+    type: string
+    description: base64 encoded private SSH key to use for authenticed wheel repos (not HTTP).
