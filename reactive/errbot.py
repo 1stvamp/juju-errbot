@@ -111,7 +111,7 @@ def setup_ssh_key():
             key_type = 'rsa' if 'RSA' in key else 'dsa'
             key_path = path.join(SSH_HOME_PATH, 'id_{}'.format(key_type))
             write_file(key_path, key.encode('ascii'), owner='ubunet',
-                       perms=600)
+                       perms=0o500)
 
     elif path.exists(SSH_HOME_PATH):
         rmtree(SSH_HOME_PATH)
@@ -127,6 +127,7 @@ def get_wheels_store():
     if not repo:
         return
 
+    args = []
     repo_type = hookenv.config('wheels_repo_type').lower()
 
     if repo_type in ('git', 'bzr', 'hg', 'svn'):
@@ -148,9 +149,10 @@ def get_wheels_store():
                                       '--sync-dir={}'.format(WHEELS_PATH),
                                       'sync'))])
 
-            args = '--no-index --find-links=file://{}'.format(WHEELS_PATH)
+            args.append('--no-index')
+            args.append('--find-links=file://{}'.format(WHEELS_PATH))
     elif repo_type in ('http', 'https', 'pypi'):
-        args = '--index-url={}'.format(repo)
+        args.append('--index-url={}'.format(repo))
     else:
         raise ValueError('Unknown wheels_repo_type: {}'.format(repo_type))
 
