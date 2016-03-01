@@ -157,3 +157,7 @@ options:
   private_ssh_key:
     type: string
     description: base64 encoded private SSH key to use for authenticed wheel repos (not HTTP).
+  update_ssh_known_hosts:
+    type: boolean
+    description: Whether SSH known_hosts file should be updated automatically from the wheels_repo host.
+    default: false
