@@ -6,7 +6,7 @@ options:
     type: string
     description: |
       The type of chat server errbot will connect with. Choose from:
-      IRC, XMPP, Telgram, Hipchat, Slack, Text or Graphic.
+      IRC, XMPP, Telegram, Hipchat, Slack, Text or Graphic.
     default: IRC
   chatrooms:
     type: string
